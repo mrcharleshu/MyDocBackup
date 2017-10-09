@@ -1,0 +1,222 @@
+### 主要的字段是CTIME和E，每个查询都会使用
+表结构：
+
+```
+CREATE TABLE TRAFODION.PKSAAS.EPGDATA (
+  EID LARGEINT  NOT NULL GENERATED ALWAYS AS IDENTITY,
+  CTIME TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  COUNTRY VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  PROVINCE VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  DE_TYPE VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  P_RESOLUTION VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  SP_NAME VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  SP_CODE VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  S_OP VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  S_NAME VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  S_CODE VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  S_CHANNEL VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  S_DOMAIN VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  E VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  CID VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  UID VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  APP_VERSION VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  LIB VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  LIB_VERSION VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  P_ID VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  P_TYPE VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  P_NAME VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  P_REFERER VARCHAR(2048) CHARACTER SET UTF8 DEFAULT NULL,
+  P_REFERER_ID VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  P_REFERER_URL VARCHAR(2048) CHARACTER SET UTF8 DEFAULT NULL,
+  P_URL VARCHAR(2048) CHARACTER SET UTF8 DEFAULT NULL,
+  PKG_NAME VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  PKG_CODE VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  PKG_TYPE SMALLINT DEFAULT NULL,
+  PKG_EX_CODE VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  PKG_CON_TYPE VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  T TIMESTAMP DEFAULT NULL,
+  T_LOADING INTEGER DEFAULT NULL,
+  T_ZONE SMALLINT DEFAULT NULL,
+  T_DURATION INTEGER DEFAULT NULL,
+  ELE_CODE VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  ELE_TYPE VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  ELE_NAME VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  ELE_POS SMALLINT DEFAULT NULL,
+  CATE_PARID VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  CON_ID VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  CON_NAME VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  CON_TYPE VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  CON_SERIES_ID VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  CON_SERIES_NAME VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  CP_NAME VARCHAR(64) CHARACTER SET UTF8 DEFAULT NULL,
+  ORD_TYPE SMALLINT DEFAULT NULL,
+  ORD_PRICE FLOAT(10) DEFAULT NULL,
+  R  INTEGER DEFAULT NULL,
+  PRIMARY KEY (EID)
+);
+```
+### 查询的时候是单个E（事件）对应时间段分组排序的结果，一般都是多个事件查询
+* SEQ 是第几个事件
+* BY_VALUE 是按什么属性（表字段，总体是特殊情况）查询
+* A_CTIME 是结果分组所属的时间
+* VALUE 是结果分组聚合值
+
+```
+(SELECT
+   0                            AS SEQ,
+   '总体'                         AS BY_VALUE,
+   TO_CHAR(CTIME, 'YYYY-MM-DD') AS A_CTIME,
+   COUNT(DISTINCT T_DURATION)   AS VALUE
+ FROM PKSAAS.EPGDATA
+ WHERE E = _UTF8'play' AND CTIME >= TIMESTAMP '2017-03-01 00:00:00.000' AND CTIME <= TIMESTAMP '2017-03-30 23:59:59.000'
+ GROUP BY BY_VALUE, A_CTIME
+ ORDER BY BY_VALUE, A_CTIME)
+UNION ALL (SELECT
+             1                            AS SEQ,
+             '总体'                         AS BY_VALUE,
+             TO_CHAR(CTIME, 'YYYY-MM-DD') AS A_CTIME,
+             COUNT(*)                     AS VALUE
+           FROM PKSAAS.EPGDATA
+           WHERE E = _UTF8'play' AND CTIME >= TIMESTAMP '2017-03-01 00:00:00.000' AND
+                 CTIME <= TIMESTAMP '2017-03-30 23:59:59.000'
+           GROUP BY BY_VALUE, A_CTIME
+           ORDER BY BY_VALUE, A_CTIME)
+UNION ALL (SELECT
+             2                            AS SEQ,
+             '总体'                         AS BY_VALUE,
+             TO_CHAR(CTIME, 'YYYY-MM-DD') AS A_CTIME,
+             COUNT(DISTINCT UID)          AS VALUE
+           FROM PKSAAS.EPGDATA
+           WHERE E = _UTF8'play' AND CTIME >= TIMESTAMP '2017-03-01 00:00:00.000' AND
+                 CTIME <= TIMESTAMP '2017-03-30 23:59:59.000'
+           GROUP BY BY_VALUE, A_CTIME
+           ORDER BY BY_VALUE, A_CTIME)
+UNION ALL (SELECT
+             3                            AS SEQ,
+             '总体'                         AS BY_VALUE,
+             TO_CHAR(CTIME, 'YYYY-MM-DD') AS A_CTIME,
+             COUNT(*)                     AS VALUE
+           FROM PKSAAS.EPGDATA
+           WHERE E = _UTF8'view' AND CTIME >= TIMESTAMP '2017-03-01 00:00:00.000' AND
+                 CTIME <= TIMESTAMP '2017-03-30 23:59:59.000'
+           GROUP BY BY_VALUE, A_CTIME
+           ORDER BY BY_VALUE, A_CTIME)
+UNION ALL (SELECT
+             4                            AS SEQ,
+             '总体'                         AS BY_VALUE,
+             TO_CHAR(CTIME, 'YYYY-MM-DD') AS A_CTIME,
+             COUNT(DISTINCT UID)          AS VALUE
+           FROM PKSAAS.EPGDATA
+           WHERE E = _UTF8'view' AND CTIME >= TIMESTAMP '2017-03-01 00:00:00.000' AND
+                 CTIME <= TIMESTAMP '2017-03-30 23:59:59.000'
+           GROUP BY BY_VALUE, A_CTIME
+           ORDER BY BY_VALUE, A_CTIME)
+UNION ALL (SELECT
+             5                                                              AS SEQ,
+             '总体'                                                           AS BY_VALUE,
+             TO_CHAR(CTIME, 'YYYY-MM-DD')                                   AS A_CTIME,
+             CASE WHEN COUNT(DISTINCT UID) = 0
+               THEN 0
+             ELSE CAST(COUNT(*) / COUNT(DISTINCT UID) AS NUMERIC(6, 1)) END AS VALUE
+           FROM PKSAAS.EPGDATA
+           WHERE E = _UTF8'view' AND CTIME >= TIMESTAMP '2017-03-01 00:00:00.000' AND
+                 CTIME <= TIMESTAMP '2017-03-30 23:59:59.000'
+           GROUP BY BY_VALUE, A_CTIME
+           ORDER BY BY_VALUE, A_CTIME)
+UNION ALL (SELECT
+             6                            AS SEQ,
+             '总体'                         AS BY_VALUE,
+             TO_CHAR(CTIME, 'YYYY-MM-DD') AS A_CTIME,
+             COUNT(*)                     AS VALUE
+           FROM PKSAAS.EPGDATA
+           WHERE E = _UTF8'exit' AND CTIME >= TIMESTAMP '2017-03-01 00:00:00.000' AND
+                 CTIME <= TIMESTAMP '2017-03-30 23:59:59.000'
+           GROUP BY BY_VALUE, A_CTIME
+           ORDER BY BY_VALUE, A_CTIME)
+UNION ALL (SELECT
+             7                            AS SEQ,
+             '总体'                         AS BY_VALUE,
+             TO_CHAR(CTIME, 'YYYY-MM-DD') AS A_CTIME,
+             COUNT(DISTINCT UID)          AS VALUE
+           FROM PKSAAS.EPGDATA
+           WHERE E = _UTF8'exit' AND CTIME >= TIMESTAMP '2017-03-01 00:00:00.000' AND
+                 CTIME <= TIMESTAMP '2017-03-30 23:59:59.000'
+           GROUP BY BY_VALUE, A_CTIME
+           ORDER BY BY_VALUE, A_CTIME)
+UNION ALL (SELECT
+             8                                                              AS SEQ,
+             '总体'                                                           AS BY_VALUE,
+             TO_CHAR(CTIME, 'YYYY-MM-DD')                                   AS A_CTIME,
+             CASE WHEN COUNT(DISTINCT UID) = 0
+               THEN 0
+             ELSE CAST(COUNT(*) / COUNT(DISTINCT UID) AS NUMERIC(6, 1)) END AS VALUE
+           FROM PKSAAS.EPGDATA
+           WHERE E = _UTF8'exit' AND CTIME >= TIMESTAMP '2017-03-01 00:00:00.000' AND
+                 CTIME <= TIMESTAMP '2017-03-30 23:59:59.000'
+           GROUP BY BY_VALUE, A_CTIME
+           ORDER BY BY_VALUE, A_CTIME)
+UNION ALL (SELECT
+             9                            AS SEQ,
+             '总体'                         AS BY_VALUE,
+             TO_CHAR(CTIME, 'YYYY-MM-DD') AS A_CTIME,
+             COUNT(*)                     AS VALUE
+           FROM PKSAAS.EPGDATA
+           WHERE E = _UTF8'click' AND CTIME >= TIMESTAMP '2017-03-01 00:00:00.000' AND
+                 CTIME <= TIMESTAMP '2017-03-30 23:59:59.000'
+           GROUP BY BY_VALUE, A_CTIME
+           ORDER BY BY_VALUE, A_CTIME)
+UNION ALL (SELECT
+             10                           AS SEQ,
+             '总体'                         AS BY_VALUE,
+             TO_CHAR(CTIME, 'YYYY-MM-DD') AS A_CTIME,
+             COUNT(DISTINCT UID)          AS VALUE
+           FROM PKSAAS.EPGDATA
+           WHERE E = _UTF8'click' AND CTIME >= TIMESTAMP '2017-03-01 00:00:00.000' AND
+                 CTIME <= TIMESTAMP '2017-03-30 23:59:59.000'
+           GROUP BY BY_VALUE, A_CTIME
+           ORDER BY BY_VALUE, A_CTIME)
+UNION ALL (SELECT
+             11                                                             AS SEQ,
+             '总体'                                                           AS BY_VALUE,
+             TO_CHAR(CTIME, 'YYYY-MM-DD')                                   AS A_CTIME,
+             CASE WHEN COUNT(DISTINCT UID) = 0
+               THEN 0
+             ELSE CAST(COUNT(*) / COUNT(DISTINCT UID) AS NUMERIC(6, 1)) END AS VALUE
+           FROM PKSAAS.EPGDATA
+           WHERE E = _UTF8'click' AND CTIME >= TIMESTAMP '2017-03-01 00:00:00.000' AND
+                 CTIME <= TIMESTAMP '2017-03-30 23:59:59.000'
+           GROUP BY BY_VALUE, A_CTIME
+           ORDER BY BY_VALUE, A_CTIME)
+UNION ALL (SELECT
+             12                           AS SEQ,
+             '总体'                         AS BY_VALUE,
+             TO_CHAR(CTIME, 'YYYY-MM-DD') AS A_CTIME,
+             COUNT(*)                     AS VALUE
+           FROM PKSAAS.EPGDATA
+           WHERE E = _UTF8'order' AND CTIME >= TIMESTAMP '2017-03-01 00:00:00.000' AND
+                 CTIME <= TIMESTAMP '2017-03-30 23:59:59.000'
+           GROUP BY BY_VALUE, A_CTIME
+           ORDER BY BY_VALUE, A_CTIME)
+UNION ALL (SELECT
+             13                           AS SEQ,
+             '总体'                         AS BY_VALUE,
+             TO_CHAR(CTIME, 'YYYY-MM-DD') AS A_CTIME,
+             COUNT(DISTINCT UID)          AS VALUE
+           FROM PKSAAS.EPGDATA
+           WHERE E = _UTF8'order' AND CTIME >= TIMESTAMP '2017-03-01 00:00:00.000' AND
+                 CTIME <= TIMESTAMP '2017-03-30 23:59:59.000'
+           GROUP BY BY_VALUE, A_CTIME
+           ORDER BY BY_VALUE, A_CTIME)
+UNION ALL (SELECT
+             14                                                             AS SEQ,
+             '总体'                                                           AS BY_VALUE,
+             TO_CHAR(CTIME, 'YYYY-MM-DD')                                   AS A_CTIME,
+             CASE WHEN COUNT(DISTINCT UID) = 0
+               THEN 0
+             ELSE CAST(COUNT(*) / COUNT(DISTINCT UID) AS NUMERIC(6, 1)) END AS VALUE
+           FROM PKSAAS.EPGDATA
+           WHERE E = _UTF8'order' AND CTIME >= TIMESTAMP '2017-03-01 00:00:00.000' AND
+                 CTIME <= TIMESTAMP '2017-03-30 23:59:59.000'
+           GROUP BY BY_VALUE, A_CTIME
+           ORDER BY BY_VALUE, A_CTIME)
+```
